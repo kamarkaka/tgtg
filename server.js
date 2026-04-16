@@ -1,6 +1,7 @@
 require('dotenv').config();
 const express = require('express');
 const session = require('express-session');
+const rateLimit = require('express-rate-limit');
 const Database = require('better-sqlite3');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
@@ -67,7 +68,13 @@ app.get('/api/session', (req, res) => {
   res.json({ authenticated: !!req.session.authenticated });
 });
 
-app.post('/api/login', (req, res) => {
+const loginLimiter = rateLimit({
+  windowMs: 5 * 60 * 1000,
+  max: 10,
+  message: { error: 'Too many login attempts, try again later' },
+});
+
+app.post('/api/login', loginLimiter, (req, res) => {
   const { username, password } = req.body;
   const usernameMatch = username && username.length === USERNAME.length &&
     crypto.timingSafeEqual(Buffer.from(username), Buffer.from(USERNAME));
