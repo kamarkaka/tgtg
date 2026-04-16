@@ -36,6 +36,12 @@ db.exec(`
     PRIMARY KEY (itemId, date),
     FOREIGN KEY (itemId) REFERENCES items(itemId) ON DELETE CASCADE
   );
+  CREATE TABLE IF NOT EXISTS errors (
+    itemId TEXT NOT NULL,
+    date TEXT NOT NULL,
+    PRIMARY KEY (itemId, date),
+    FOREIGN KEY (itemId) REFERENCES items(itemId) ON DELETE CASCADE
+  );
 `);
 
 // --- Express App ---
@@ -150,9 +156,11 @@ function cleanupOldNotifications() {
   const cutoff = new Date();
   cutoff.setDate(cutoff.getDate() - NOTIFICATION_RETENTION_DAYS);
   const cutoffStr = cutoff.toISOString().slice(0, 10);
-  const result = db.prepare('DELETE FROM notifications WHERE date < ?').run(cutoffStr);
-  if (result.changes > 0) {
-    console.log(`[cleanup] Removed ${result.changes} old notification rows`);
+  const notifResult = db.prepare('DELETE FROM notifications WHERE date < ?').run(cutoffStr);
+  const errorResult = db.prepare('DELETE FROM errors WHERE date < ?').run(cutoffStr);
+  const total = notifResult.changes + errorResult.changes;
+  if (total > 0) {
+    console.log(`[cleanup] Removed ${total} old rows`);
   }
 }
 
@@ -234,6 +242,15 @@ async function checkItem(itemId) {
     incrementDailyCount(itemId, today);
   } catch (err) {
     console.error(`[check] ${itemId}: ${err.message}`);
+    const today = todayStr();
+    const alreadySent = db.prepare('SELECT 1 FROM errors WHERE itemId = ? AND date = ?').get(itemId, today);
+    if (!alreadySent) {
+      db.prepare('INSERT OR IGNORE INTO errors (itemId, date) VALUES (?, ?)').run(itemId, today);
+      await sendGotify(
+        `TGTG: Error checking item ${itemId}`,
+        `${err.message}\nPlease verify: https://share.toogoodtogo.com/item/${itemId}`
+      );
+    }
   }
 }
 
