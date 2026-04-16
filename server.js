@@ -5,6 +5,7 @@ const Database = require('better-sqlite3');
 const puppeteer = require('puppeteer-extra');
 const StealthPlugin = require('puppeteer-extra-plugin-stealth');
 puppeteer.use(StealthPlugin());
+const crypto = require('crypto');
 const path = require('path');
 
 // --- Config ---
@@ -67,7 +68,11 @@ app.get('/api/session', (req, res) => {
 
 app.post('/api/login', (req, res) => {
   const { username, password } = req.body;
-  if (username === USERNAME && password === PASSWORD) {
+  const usernameMatch = username && username.length === USERNAME.length &&
+    crypto.timingSafeEqual(Buffer.from(username), Buffer.from(USERNAME));
+  const passwordMatch = password && password.length === PASSWORD.length &&
+    crypto.timingSafeEqual(Buffer.from(password), Buffer.from(PASSWORD));
+  if (usernameMatch && passwordMatch) {
     req.session.authenticated = true;
     res.json({ ok: true });
   } else {
