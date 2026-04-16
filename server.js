@@ -19,6 +19,7 @@ const GOTIFY_TOKEN = process.env.GOTIFY_TOKEN;
 const CHECK_INTERVAL_MS = parseInt(process.env.CHECK_INTERVAL_MS, 10) || 60000;
 const NOTIFICATION_RETENTION_DAYS = parseInt(process.env.NOTIFICATION_RETENTION_DAYS, 10) || 7;
 const MAX_NOTIFICATIONS_PER_DAY = 10;
+const TIMEZONE = process.env.TIMEZONE || 'America/New_York';
 
 // --- Database ---
 const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'tgtg.db');
@@ -108,7 +109,8 @@ app.post('/api/items', requireAuth, (req, res) => {
     db.prepare('INSERT OR IGNORE INTO items (itemId) VALUES (?)').run(itemId.trim());
     res.json({ ok: true });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    console.error(`[api] Failed to add item: ${err.message}`);
+    res.status(500).json({ error: 'Failed to add item' });
   }
 });
 
@@ -122,7 +124,7 @@ app.delete('/api/items/:itemId', requireAuth, (req, res) => {
 
 // --- Polling Logic ---
 function todayStr() {
-  return new Date().toISOString().slice(0, 10);
+  return new Date().toLocaleDateString('en-CA', { timeZone: TIMEZONE });
 }
 
 function formatPrice(itemPrice) {
@@ -136,7 +138,7 @@ function formatPickupInterval(interval) {
   if (!interval || !interval.start || !interval.end) return 'N/A';
   const fmt = (iso) => new Date(iso).toLocaleTimeString('en-US', {
     hour: 'numeric', minute: '2-digit', hour12: true,
-    timeZone: 'America/New_York',
+    timeZone: TIMEZONE,
   });
   return `${fmt(interval.start)} - ${fmt(interval.end)}`;
 }
