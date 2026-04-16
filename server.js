@@ -11,8 +11,8 @@ const path = require('path');
 
 // --- Config ---
 const PORT = process.env.PORT || 3000;
-const USERNAME = process.env.USERNAME || 'admin';
-const PASSWORD = process.env.PASSWORD || 'changeme';
+const USERNAME = process.env.APP_USERNAME || 'admin';
+const PASSWORD = process.env.APP_PASSWORD || 'changeme';
 const SESSION_SECRET = process.env.SESSION_SECRET || 'change-me-in-production';
 const GOTIFY_URL = process.env.GOTIFY_URL;
 const GOTIFY_TOKEN = process.env.GOTIFY_TOKEN;

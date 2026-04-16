@@ -40,8 +40,8 @@ The SQLite database is stored at `/data/tgtg.db` inside the container. Mount `/d
 
 | Variable | Required | Default | Description |
 |----------|----------|---------|-------------|
-| `USERNAME` | No | `admin` | Login username |
-| `PASSWORD` | No | `changeme` | Login password |
+| `APP_USERNAME` | No | `admin` | Login username |
+| `APP_PASSWORD` | No | `changeme` | Login password |
 | `SESSION_SECRET` | No | `change-me-in-production` | Express session secret |
 | `GOTIFY_URL` | Yes | | Gotify server URL (e.g. `https://gotify.example.com`) |
 | `GOTIFY_TOKEN` | Yes | | Gotify app token |
