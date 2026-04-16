@@ -209,13 +209,12 @@ async function checkItem(itemId) {
       return;
     }
 
+    const displayName = data.payload?.displayName || 'Unknown';
     const available = data.payload?.itemsAvailable;
     if (!available || available <= 0) {
-      console.log(`[check] ${itemId}: 0 available`);
+      console.log(`[check] ${itemId} (${displayName}): 0 available`);
       return;
     }
-
-    const displayName = data.payload.item?.displayName || 'Unknown';
     const price = formatPrice(data.payload.item?.itemPrice);
     const pickupInterval = formatPickupInterval(data.payload.pickupInterval);
     const address = data.payload.pickupLocation?.address?.addressLine || 'N/A';
