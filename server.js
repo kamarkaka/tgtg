@@ -221,19 +221,14 @@ async function checkItem(browser, itemId) {
   const cachedUrl = `https://www.toogoodtogo.com/api/surprise-bags/bag/${itemId}`;
   const today = todayStr();
   try {
-    // Uncached: latest availability and price
+    // Uncached: latest availability, price, pickup interval (flat structure, no wrapper)
     const live = await fetchWithBrowser(browser, uncachedUrl);
 
-    if (!live.success) {
-      console.warn(`[check] ${itemId}: success=false`);
-      return;
-    }
+    const available = live.itemsAvailable;
+    const price = formatPrice(live.itemPrice);
+    const pickupInterval = formatPickupInterval(live.pickupInterval);
 
-    const available = live.payload?.itemsAvailable;
-    const price = formatPrice(live.payload?.item?.itemPrice);
-    const pickupInterval = formatPickupInterval(live.payload?.pickupInterval);
-
-    // Cached: textual info (display name, address)
+    // Cached: textual info (display name, address) — wrapped in { success, payload }
     // Fetch if we don't have a display name yet, or items are available (need full info for notification)
     const storedItem = db.prepare('SELECT displayName FROM items WHERE itemId = ?').get(itemId);
     let displayName = storedItem?.displayName;
