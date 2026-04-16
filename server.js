@@ -177,23 +177,16 @@ function incrementDailyCount(itemId, date) {
 }
 
 // --- Puppeteer Browser ---
-let browser = null;
-
-async function getBrowser() {
-  if (!browser || !browser.connected) {
-    const launchOpts = { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] };
-    if (process.env.PUPPETEER_EXECUTABLE_PATH) {
-      launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
-    }
-    browser = await puppeteer.launch(launchOpts);
-    console.log('[browser] Launched headless Chrome');
+function launchBrowser() {
+  const launchOpts = { headless: true, args: ['--no-sandbox', '--disable-setuid-sandbox'] };
+  if (process.env.PUPPETEER_EXECUTABLE_PATH) {
+    launchOpts.executablePath = process.env.PUPPETEER_EXECUTABLE_PATH;
   }
-  return browser;
+  return puppeteer.launch(launchOpts);
 }
 
-async function fetchWithBrowser(url) {
-  const b = await getBrowser();
-  const page = await b.newPage();
+async function fetchWithBrowser(browser, url) {
+  const page = await browser.newPage();
   try {
     const response = await page.goto(url, { waitUntil: 'networkidle0', timeout: 30000 });
     const status = response.status();
@@ -207,10 +200,11 @@ async function fetchWithBrowser(url) {
   }
 }
 
-async function checkItem(itemId) {
+async function checkItem(browser, itemId) {
   const url = `https://www.toogoodtogo.com/api/surprise-bags/bag/${itemId}`;
+  const today = todayStr();
   try {
-    const data = await fetchWithBrowser(url);
+    const data = await fetchWithBrowser(browser, url);
 
     if (!data.success) {
       console.warn(`[check] ${itemId}: success=false`);
@@ -229,7 +223,6 @@ async function checkItem(itemId) {
 
     console.log(`[check] ${itemId}: ${available} available - ${displayName} @ ${price}`);
 
-    const today = todayStr();
     const dailyCount = getDailyCount(itemId, today);
     if (dailyCount >= MAX_NOTIFICATIONS_PER_DAY) {
       console.log(`[check] ${itemId}: daily notification limit reached (${dailyCount}/${MAX_NOTIFICATIONS_PER_DAY})`);
@@ -242,10 +235,8 @@ async function checkItem(itemId) {
     incrementDailyCount(itemId, today);
   } catch (err) {
     console.error(`[check] ${itemId}: ${err.message}`);
-    const today = todayStr();
-    const alreadySent = db.prepare('SELECT 1 FROM errors WHERE itemId = ? AND date = ?').get(itemId, today);
-    if (!alreadySent) {
-      db.prepare('INSERT OR IGNORE INTO errors (itemId, date) VALUES (?, ?)').run(itemId, today);
+    const { changes } = db.prepare('INSERT OR IGNORE INTO errors (itemId, date) VALUES (?, ?)').run(itemId, today);
+    if (changes > 0) {
       await sendGotify(
         `TGTG: Error checking item ${itemId}`,
         `${err.message}\nPlease verify: https://share.toogoodtogo.com/item/${itemId}`
@@ -262,9 +253,15 @@ async function pollAll() {
     return;
   }
   console.log(`[poll] Checking ${items.length} item(s)...`);
-  for (let i = 0; i < items.length; i++) {
-    if (i > 0) await new Promise((r) => setTimeout(r, 1000));
-    await checkItem(items[i].itemId);
+  const browser = await launchBrowser();
+  try {
+    for (let i = 0; i < items.length; i++) {
+      if (i > 0) await new Promise((r) => setTimeout(r, 1000));
+      await checkItem(browser, items[i].itemId);
+    }
+  } finally {
+    await browser.close();
+    console.log('[browser] Closed');
   }
 }
 
