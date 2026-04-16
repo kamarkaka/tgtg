@@ -217,26 +217,42 @@ async function fetchWithBrowser(browser, url) {
 }
 
 async function checkItem(browser, itemId) {
-  const url = `https://www.toogoodtogo.com/api/surprise-bags/uncached/bag/${itemId}`;
+  const uncachedUrl = `https://www.toogoodtogo.com/api/surprise-bags/uncached/bag/${itemId}`;
+  const cachedUrl = `https://www.toogoodtogo.com/api/surprise-bags/bag/${itemId}`;
   const today = todayStr();
   try {
-    const data = await fetchWithBrowser(browser, url);
+    // Uncached: latest availability and price
+    const live = await fetchWithBrowser(browser, uncachedUrl);
 
-    if (!data.success) {
+    if (!live.success) {
       console.warn(`[check] ${itemId}: success=false`);
       return;
     }
 
-    const displayName = data.payload?.displayName || 'Unknown';
-    db.prepare('UPDATE items SET displayName = ? WHERE itemId = ? AND (displayName IS NULL OR displayName != ?)').run(displayName, itemId, displayName);
-    const available = data.payload?.itemsAvailable;
+    const available = live.payload?.itemsAvailable;
+    const price = formatPrice(live.payload?.item?.itemPrice);
+    const pickupInterval = formatPickupInterval(live.payload?.pickupInterval);
+
+    // Cached: textual info (display name, address)
+    // Fetch if we don't have a display name yet, or items are available (need full info for notification)
+    const storedItem = db.prepare('SELECT displayName FROM items WHERE itemId = ?').get(itemId);
+    let displayName = storedItem?.displayName;
+    let address = 'N/A';
+
+    if (!displayName || (available && available > 0)) {
+      const cached = await fetchWithBrowser(browser, cachedUrl);
+      if (cached.success) {
+        displayName = cached.payload?.displayName || displayName || 'Unknown';
+        address = cached.payload?.pickupLocation?.address?.addressLine || 'N/A';
+        db.prepare('UPDATE items SET displayName = ? WHERE itemId = ? AND (displayName IS NULL OR displayName != ?)').run(displayName, itemId, displayName);
+      }
+    }
+    displayName = displayName || 'Unknown';
+
     if (!available || available <= 0) {
       console.log(`[check] ${itemId} (${displayName}): 0 available`);
       return;
     }
-    const price = formatPrice(data.payload.item?.itemPrice);
-    const pickupInterval = formatPickupInterval(data.payload.pickupInterval);
-    const address = data.payload.pickupLocation?.address?.addressLine || 'N/A';
 
     console.log(`[check] ${itemId}: ${available} available - ${displayName} @ ${price}`);
 
