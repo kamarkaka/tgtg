@@ -48,6 +48,7 @@ db.exec(`
 // --- Express App ---
 const app = express();
 app.use(express.json());
+// Uses default MemoryStore — acceptable for single-user; sessions lost on restart
 app.use(session({
   secret: SESSION_SECRET,
   resave: false,
