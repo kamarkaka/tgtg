@@ -7,6 +7,7 @@ const itemIdInput = document.getElementById('item-id-input');
 const addBtn = document.getElementById('add-btn');
 const itemsList = document.getElementById('items-list');
 const emptyMsg = document.getElementById('empty-msg');
+const actionError = document.getElementById('action-error');
 
 function show(el) { el.classList.remove('hidden'); }
 function hide(el) { el.classList.add('hidden'); }
@@ -69,7 +70,11 @@ async function loadItems() {
     hide(emptyMsg);
     for (const item of items) {
       const li = document.createElement('li');
-      li.textContent = item.itemId;
+      const info = document.createElement('span');
+      info.textContent = item.displayName
+        ? `${item.displayName} (${item.itemId})`
+        : item.itemId;
+      li.appendChild(info);
       const del = document.createElement('button');
       del.textContent = 'Delete';
       del.addEventListener('click', () => deleteItem(item.itemId));
@@ -77,6 +82,19 @@ async function loadItems() {
       itemsList.appendChild(li);
     }
   }
+}
+
+let errorTimeout;
+function showError(msg) {
+  clearTimeout(errorTimeout);
+  actionError.textContent = msg;
+  show(actionError);
+  errorTimeout = setTimeout(() => hide(actionError), 5000);
+}
+
+async function handleApiError(res, defaultMsg) {
+  const data = await res.json().catch(() => ({}));
+  showError(data.error || defaultMsg);
 }
 
 addBtn.addEventListener('click', async () => {
@@ -90,6 +108,8 @@ addBtn.addEventListener('click', async () => {
   if (res.ok) {
     itemIdInput.value = '';
     loadItems();
+  } else {
+    await handleApiError(res, 'Failed to add item');
   }
 });
 
@@ -98,8 +118,12 @@ itemIdInput.addEventListener('keydown', (e) => {
 });
 
 async function deleteItem(itemId) {
-  await fetch(`/api/items/${encodeURIComponent(itemId)}`, { method: 'DELETE' });
-  loadItems();
+  const res = await fetch(`/api/items/${encodeURIComponent(itemId)}`, { method: 'DELETE' });
+  if (res.ok) {
+    loadItems();
+  } else {
+    await handleApiError(res, 'Failed to delete item');
+  }
 }
 
 checkSession();

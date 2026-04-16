@@ -30,6 +30,7 @@ db.pragma('foreign_keys = ON');
 db.exec(`
   CREATE TABLE IF NOT EXISTS items (
     itemId TEXT PRIMARY KEY,
+    displayName TEXT,
     createdAt TEXT NOT NULL DEFAULT (datetime('now'))
   );
   CREATE TABLE IF NOT EXISTS notifications (
@@ -96,7 +97,7 @@ app.post('/api/logout', (req, res) => {
 
 // Item routes
 app.get('/api/items', requireAuth, (req, res) => {
-  const items = db.prepare('SELECT itemId, createdAt FROM items ORDER BY createdAt DESC').all();
+  const items = db.prepare('SELECT itemId, displayName, createdAt FROM items ORDER BY createdAt DESC').all();
   res.json(items);
 });
 
@@ -216,7 +217,7 @@ async function fetchWithBrowser(browser, url) {
 }
 
 async function checkItem(browser, itemId) {
-  const url = `https://www.toogoodtogo.com/api/surprise-bags/bag/${itemId}`;
+  const url = `https://www.toogoodtogo.com/api/surprise-bags/uncached/bag/${itemId}`;
   const today = todayStr();
   try {
     const data = await fetchWithBrowser(browser, url);
@@ -227,6 +228,7 @@ async function checkItem(browser, itemId) {
     }
 
     const displayName = data.payload?.displayName || 'Unknown';
+    db.prepare('UPDATE items SET displayName = ? WHERE itemId = ? AND (displayName IS NULL OR displayName != ?)').run(displayName, itemId, displayName);
     const available = data.payload?.itemsAvailable;
     if (!available || available <= 0) {
       console.log(`[check] ${itemId} (${displayName}): 0 available`);
