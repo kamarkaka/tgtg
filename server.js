@@ -262,8 +262,9 @@ async function pollAll() {
     return;
   }
   console.log(`[poll] Checking ${items.length} item(s)...`);
-  for (const { itemId } of items) {
-    await checkItem(itemId);
+  for (let i = 0; i < items.length; i++) {
+    if (i > 0) await new Promise((r) => setTimeout(r, 1000));
+    await checkItem(items[i].itemId);
   }
 }
 
