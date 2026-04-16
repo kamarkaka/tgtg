@@ -1,0 +1,42 @@
+name: Build and Push Docker Image
+
+on:
+  schedule:
+    - cron: '0 8 * * *'
+  workflow_dispatch:
+
+jobs:
+  check-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v6.0.2
+        with:
+          fetch-depth: 0
+
+      - name: Check for recent commits
+        id: check_commits
+        run: |
+          if [ -n "$(git log --since='24 hours ago' --oneline)" ]; then
+            echo "new_commits=true" >> $GITHUB_OUTPUT
+            echo "Changes detected. Proceeding to build..."
+          else
+            echo "new_commits=false" >> $GITHUB_OUTPUT
+            echo "NO changes in the last 24 hours. Skipping."
+          fi
+
+      - name: Log in to Docker Hub
+        if: steps.check_commits.outputs.new_commits == 'true'
+        uses: docker/login-action@v4.0.0
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push Docker image
+        if: steps.check_commits.outputs.new_commits == 'true'
+        uses: docker/build-push-action@v7.0.0
+        with:
+          context: .
+          push: true
+          no-cache: true
+          tags: kamarkaka4/tgtg:latest,kamarkaka4/tgtg:${{ github.sha }}
