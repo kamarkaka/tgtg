@@ -1,0 +1,7 @@
+node_modules
+tgtg.db
+tgtg.db-wal
+tgtg.db-shm
+.env
+plan
+sample.json

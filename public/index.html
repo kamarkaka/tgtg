@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>TGTG Monitor</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>TGTG Monitor</h1>
+      <button id="logout-btn" class="hidden">Logout</button>
+    </header>
+
+    <!-- Login -->
+    <div id="login-view" class="hidden">
+      <form id="login-form">
+        <input type="text" id="username" placeholder="Username" required>
+        <input type="password" id="password" placeholder="Password" required>
+        <button type="submit">Login</button>
+      </form>
+      <p id="login-error" class="error hidden"></p>
+    </div>
+
+    <!-- Main -->
+    <div id="main-view" class="hidden">
+      <div class="add-item">
+        <input type="text" id="item-id-input" placeholder="Item ID">
+        <button id="add-btn">Add</button>
+      </div>
+      <h2>Monitored Items</h2>
+      <ul id="items-list"></ul>
+      <p id="empty-msg" class="hidden">No items being monitored.</p>
+    </div>
+  </div>
+  <script src="app.js"></script>
+</body>
+</html>
